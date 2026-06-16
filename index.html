@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>스마트 학식 주문 시스템 - 고려대학교</title>
+    <!-- Google Fonts: Pretendard and Outfit -->
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Top Role Simulator Switcher -->
+    <header class="sim-header">
+        <div class="sim-header-container">
+            <span class="sim-title"><span class="sim-logo">🐯</span> KU 스마트 학식 시뮬레이터</span>
+            <div class="sim-btn-group">
+                <button id="btn-role-student" class="sim-btn active" onclick="switchRole('student')">👤 학생/교직원 포털</button>
+                <button id="btn-role-scanner" class="sim-btn" onclick="switchRole('scanner')">⚙️ 식당 QR 수령기</button>
+                <button id="btn-role-admin" class="sim-btn" onclick="switchRole('admin')">👑 관리자 대시보드</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="app-container">
+        <!-- ==============================================
+             1. STUDENT & FACULTY PORTAL
+             ============================================== -->
+        <section id="portal-student" class="portal-section active">
+            <!-- Student Auth Page -->
+            <div id="student-auth" class="auth-card glass-panel hidden">
+                <div class="brand-header">
+                    <img src="https://www.korea.ac.kr/assets2021/images/sub/sub_logo.png" alt="고려대 로고" class="ku-logo" onerror="this.style.display='none'">
+                    <h2>스마트 학식 주문</h2>
+                    <p>Pre-order & Smart Pickup System</p>
+                </div>
+                
+                <!-- Login Form -->
+                <div id="login-form-container">
+                    <div class="input-group">
+                        <label for="login-student-id">학번 / 사번</label>
+                        <input type="text" id="login-student-id" placeholder="학번 10자리를 입력하세요 (예: 2026123456)">
+                    </div>
+                    <div class="input-group">
+                        <label for="login-password">비밀번호</label>
+                        <input type="password" id="login-password" placeholder="비밀번호를 입력하세요">
+                    </div>
+                    <button class="btn btn-primary btn-block" onclick="handleLogin()">로그인</button>
+                    <p class="auth-toggle">계정이 없으신가요? <a href="#" onclick="toggleAuthForm(true)">회원가입</a></p>
+                </div>
+
+                <!-- Signup Form -->
+                <div id="signup-form-container" class="hidden">
+                    <div class="input-group">
+                        <label for="signup-student-id">학번 / 사번</label>
+                        <input type="text" id="signup-student-id" placeholder="학번 10자리를 입력하세요">
+                    </div>
+                    <div class="input-group">
+                        <label for="signup-name">이름</label>
+                        <input type="text" id="signup-name" placeholder="이름을 입력하세요">
+                    </div>
+                    <div class="input-group">
+                        <label for="signup-password">비밀번호</label>
+                        <input type="password" id="signup-password" placeholder="비밀번호를 설정하세요">
+                    </div>
+                    <button class="btn btn-primary btn-block" onclick="handleSignup()">회원가입 완료</button>
+                    <p class="auth-toggle">이미 계정이 있으신가요? <a href="#" onclick="toggleAuthForm(false)">로그인</a></p>
+                </div>
+            </div>
+
+            <!-- Student Dashboard Page -->
+            <div id="student-dashboard" class="dashboard-container">
+                <!-- Top User Status Panel -->
+                <div class="user-status-bar glass-panel">
+                    <div class="user-info">
+                        <span class="user-badge" id="lbl-user-role">STUDENT</span>
+                        <h3 id="lbl-user-name">고대생 님</h3>
+                    </div>
+                    <div class="balance-info">
+                        <span class="balance-title">학식 식권 포인트</span>
+                        <div class="balance-value-container">
+                            <span class="balance-value" id="lbl-user-points">50,000</span><span class="currency">P</span>
+                            <button class="btn-charge" title="충전하기" onclick="chargePoints()">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="user-actions">
+                        <button class="btn btn-outline btn-sm" onclick="openOrderHistory()">주문 내역</button>
+                        <button class="btn btn-text btn-sm" onclick="handleLogout()">로그아웃</button>
+                    </div>
+                </div>
+
+                <!-- Menu Filtering Controls -->
+                <div class="filter-controls-container">
+                    <!-- Date Selector (Monday to Friday) -->
+                    <div class="date-selector glass-panel" id="date-tabs">
+                        <!-- Will be dynamically populated by JS -->
+                    </div>
+
+                    <!-- Meal Category Selector (Breakfast, Lunch, Dinner) -->
+                    <div class="meal-selector glass-panel">
+                        <button class="meal-btn active" data-meal="all" onclick="filterMeal('all')">전체 식사</button>
+                        <button class="meal-btn" data-meal="breakfast" onclick="filterMeal('breakfast')">🌅 아침 (조식)</button>
+                        <button class="meal-btn" data-meal="lunch" onclick="filterMeal('lunch')">☀️ 점심 (중식)</button>
+                        <button class="meal-btn" data-meal="dinner" onclick="filterMeal('dinner')">🌙 저녁 (석식)</button>
+                    </div>
+                </div>
+
+                <!-- Menu Grid -->
+                <div class="menu-section-header">
+                    <h2>오늘의 학식 메뉴 <span class="selected-date-lbl" id="lbl-selected-date">6월 16일 (화)</span></h2>
+                    <span class="menu-count" id="lbl-menu-count">총 0개 메뉴</span>
+                </div>
+                <div class="menu-grid" id="menu-items-grid">
+                    <!-- Will be dynamically populated by JS -->
+                </div>
+            </div>
+
+            <!-- Floating Cart Button -->
+            <button id="floating-cart-btn" class="floating-cart" onclick="toggleCartDrawer(true)">
+                <div class="cart-icon-wrapper">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+                        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+                    </svg>
+                    <span class="cart-badge" id="cart-badge-count">0</span>
+                </div>
+                <span class="cart-text">장바구니 보기</span>
+            </button>
+        </section>
+
+        <!-- ==============================================
+             2. CAFE KITCHEN / STAFF SCANNER PORTAL
+             ============================================== -->
+        <section id="portal-scanner" class="portal-section">
+            <div class="scanner-container glass-panel">
+                <div class="scanner-header">
+                    <span class="scanner-badge">STAFF SIMULATOR</span>
+                    <h2>식당 배식구 무인 QR 수령기</h2>
+                    <p>학생이 제시한 모바일 QR 코드를 스캔하여 음식 수령 처리를 진행합니다.</p>
+                </div>
+
+                <div class="scanner-layout">
+                    <!-- Virtual Scanner Camera Window -->
+                    <div class="scanner-view-panel">
+                        <div class="scanner-camera-box">
+                            <div class="scanner-laser"></div>
+                            <div class="scanner-target-box"></div>
+                            <div id="scanner-idle-msg" class="scanner-status-text">
+                                <span class="scan-icon">🔲</span>
+                                <p>QR 수령 대기 중...</p>
+                            </div>
+                            <div id="scanner-loading-msg" class="scanner-status-text hidden">
+                                <span class="loader-spinner"></span>
+                                <p>QR 코드 분석 중...</p>
+                            </div>
+                            <div id="scanner-success-msg" class="scanner-status-text success hidden">
+                                <span class="success-icon">✔️</span>
+                                <p>수령 완료 승인!</p>
+                            </div>
+                        </div>
+
+                        <!-- Manual Scanning Simulator -->
+                        <div class="manual-scan-box">
+                            <label for="scanner-manual-input">수령 대기중인 주문 즉시 스캔</label>
+                            <div id="scanner-quick-list" class="quick-orders-list">
+                                <!-- Ready for pickup order buttons will be populated dynamically -->
+                            </div>
+                            <div class="manual-input-row">
+                                <input type="text" id="scanner-manual-input" placeholder="직접 주문번호 입력 (예: ORD-1738)">
+                                <button class="btn btn-secondary" onclick="simulateManualScan()">수령 확인</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Scanner Receipt Log Panel -->
+                    <div class="scanner-log-panel">
+                        <h3>최근 수령 확인 로그</h3>
+                        <div class="scanner-logs" id="scanner-logs-list">
+                            <div class="log-empty">최근 수령된 내역이 없습니다.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==============================================
+             3. ADMIN PORTAL (DASHBOARD)
+             ============================================== -->
+        <section id="portal-admin" class="portal-section">
+            <div class="admin-layout">
+                <!-- Sidebar Navigation -->
+                <aside class="admin-sidebar glass-panel">
+                    <div class="admin-profile">
+                        <div class="admin-avatar">🐯</div>
+                        <div>
+                            <h4>식당 총괄 관리자</h4>
+                            <p>korea_admin</p>
+                        </div>
+                    </div>
+                    <nav class="admin-nav">
+                        <button class="admin-nav-btn active" data-tab="admin-dashboard" onclick="switchAdminTab('admin-dashboard')">📊 대시보드 및 통계</button>
+                        <button class="admin-nav-btn" data-tab="admin-menu" onclick="switchAdminTab('admin-menu')">🍲 메뉴 등록 및 관리</button>
+                        <button class="admin-nav-btn" data-tab="admin-orders" onclick="switchAdminTab('admin-orders')">📝 주문 실시간 제어</button>
+                    </nav>
+                </aside>
+
+                <!-- Admin Main Content Area -->
+                <div class="admin-content-area">
+                    <!-- Tab 1: Dashboard & Analytics -->
+                    <div id="tab-admin-dashboard" class="admin-tab-content active">
+                        <!-- Status Summary Cards -->
+                        <div class="stats-grid">
+                            <div class="stat-card glass-panel">
+                                <span class="stat-icon sales">₩</span>
+                                <div class="stat-body">
+                                    <span class="stat-title">오늘의 총 매출액</span>
+                                    <h2 id="lbl-admin-sales">0원</h2>
+                                </div>
+                            </div>
+                            <div class="stat-card glass-panel">
+                                <span class="stat-icon orders">🛒</span>
+                                <div class="stat-body">
+                                    <span class="stat-title">오늘의 총 주문건수</span>
+                                    <h2 id="lbl-admin-orders-count">0건</h2>
+                                </div>
+                            </div>
+                            <div class="stat-card glass-panel">
+                                <span class="stat-icon completion">🥗</span>
+                                <div class="stat-body">
+                                    <span class="stat-title">주문 수령 완료율</span>
+                                    <h2 id="lbl-admin-pickup-rate">0%</h2>
+                                </div>
+                            </div>
+                            <div class="stat-card glass-panel">
+                                <span class="stat-icon points">💳</span>
+                                <div class="stat-body">
+                                    <span class="stat-title">결제수단 (포인트/카드)</span>
+                                    <h2 id="lbl-admin-payment-ratio">0% / 0%</h2>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Charts Visualizations -->
+                        <div class="admin-charts-row">
+                            <div class="chart-box glass-panel">
+                                <h3>📊 메뉴별 일일 매출 현황</h3>
+                                <div class="chart-container" id="sales-chart-wrapper">
+                                    <!-- Dynamic SVG bar chart will be rendered here -->
+                                </div>
+                            </div>
+                            <div class="chart-box glass-panel">
+                                <h3>🔥 인기 실시간 메뉴 순위</h3>
+                                <div class="ranking-list" id="popular-ranking-list">
+                                    <!-- Dynamic popular items will be rendered here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab 2: Menu CRUD Manager -->
+                    <div id="tab-admin-menu" class="admin-tab-content">
+                        <div class="admin-header-row">
+                            <h2>🍲 전체 등록 학식 메뉴 관리</h2>
+                            <button class="btn btn-primary" onclick="openMenuFormModal(null)">➕ 신규 학식 등록</button>
+                        </div>
+
+                        <div class="menu-table-container glass-panel">
+                            <table class="admin-table">
+                                <thead>
+                                    <tr>
+                                        <th>식사 시간</th>
+                                        <th>메뉴명</th>
+                                        <th>가격 (원)</th>
+                                        <th>기본 제공 수량</th>
+                                        <th>현재 잔여량</th>
+                                        <th>알레르기 유발 정보</th>
+                                        <th>작업</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="admin-menu-list">
+                                    <!-- Will be populated dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Tab 3: Realtime Order Controller -->
+                    <div id="tab-admin-orders" class="admin-tab-content">
+                        <div class="admin-header-row">
+                            <h2>📝 실시간 학식 주문 처리 데스크</h2>
+                            <div class="order-filter-tags">
+                                <button class="filter-tag active" data-status="all" onclick="filterAdminOrders('all')">전체</button>
+                                <button class="filter-tag" data-status="paid" onclick="filterAdminOrders('paid')">결제완료</button>
+                                <button class="filter-tag" data-status="preparing" onclick="filterAdminOrders('preparing')">조리중</button>
+                                <button class="filter-tag" data-status="ready" onclick="filterAdminOrders('ready')">수령대기</button>
+                                <button class="filter-tag" data-status="completed" onclick="filterAdminOrders('completed')">수령완료</button>
+                                <button class="filter-tag" data-status="cancelled" onclick="filterAdminOrders('cancelled')">주문취소</button>
+                            </div>
+                        </div>
+
+                        <div class="order-table-container glass-panel">
+                            <table class="admin-table">
+                                <thead>
+                                    <tr>
+                                        <th>주문 시간 / 번호</th>
+                                        <th>주문자 (학번)</th>
+                                        <th>주문 메뉴 상세</th>
+                                        <th>결제 방식 / 금액</th>
+                                        <th>상태</th>
+                                        <th>주문 관리 액션</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="admin-orders-list">
+                                    <!-- Will be populated dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- ==============================================
+         GLOBAL MODALS & DRAWERS
+         ============================================== -->
+    
+    <!-- 1. Menu Detail Modal (Student View) -->
+    <div id="modal-menu-detail" class="modal-overlay">
+        <div class="modal-card glass-panel animate-scale">
+            <button class="modal-close-btn" onclick="closeModal('modal-menu-detail')">&times;</button>
+            <div class="modal-hero-image" id="detail-food-img" style="background-image: url('https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=800');">
+                <span class="meal-badge" id="detail-meal-type">점심</span>
+            </div>
+            <div class="modal-body">
+                <div class="detail-header-row">
+                    <h2 id="detail-menu-name">고려대 시그니처 쇠고기국밥</h2>
+                    <span class="detail-price" id="detail-menu-price">₩6,000</span>
+                </div>
+                <p class="detail-desc" id="detail-menu-desc">한우 사골을 깊게 우려내어 무와 쇠고기를 듬뿍 넣고 끓여낸 얼큰하고 시원한 고려대 시그니처 메뉴입니다.</p>
+                
+                <div class="detail-section">
+                    <h4>🌾 알레르기 유발 정보</h4>
+                    <div class="allergy-tags" id="detail-allergy-list">
+                        <!-- Will be populated dynamically -->
+                    </div>
+                </div>
+
+                <div class="detail-section quantity-section">
+                    <h4>🔢 수량 선택 (잔여: <span id="detail-remaining-qty">15</span>개)</h4>
+                    <div class="quantity-controller">
+                        <button class="qty-btn" onclick="adjustDetailQty(-1)">-</button>
+                        <span class="qty-val" id="detail-qty-val">1</span>
+                        <button class="qty-btn" onclick="adjustDetailQty(1)">+</button>
+                    </div>
+                </div>
+
+                <button class="btn btn-primary btn-block btn-lg" id="btn-add-to-cart" onclick="addSelectedToCart()">장바구니 담기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. Cart Drawer Overlay -->
+    <div id="drawer-cart" class="drawer-overlay" onclick="handleDrawerOutsideClick(event)">
+        <div class="drawer-panel glass-panel">
+            <div class="drawer-header">
+                <h2>🛒 장바구니</h2>
+                <button class="drawer-close-btn" onclick="toggleCartDrawer(false)">&times;</button>
+            </div>
+            
+            <div class="drawer-body">
+                <!-- Cart Items List -->
+                <div class="cart-items-container" id="cart-items-list">
+                    <!-- Will be populated dynamically -->
+                </div>
+
+                <!-- Payment details and controls -->
+                <div class="cart-summary-section">
+                    <div class="summary-row">
+                        <span>선택 메뉴 수량</span>
+                        <span id="lbl-cart-total-qty">0개</span>
+                    </div>
+                    <div class="summary-row total">
+                        <span>총 결제금액</span>
+                        <span id="lbl-cart-total-price">0원</span>
+                    </div>
+
+                    <!-- Payment Method Picker -->
+                    <div class="payment-method-selector">
+                        <h4>💳 결제수단 선택</h4>
+                        <div class="pay-method-grid">
+                            <label class="pay-method-card active" id="pay-card-points" onclick="selectPaymentMethod('points')">
+                                <input type="radio" name="pay-method" value="points" checked style="display:none">
+                                <span class="pay-icon">🎫</span>
+                                <span class="pay-label">식권 포인트</span>
+                            </label>
+                            <label class="pay-method-card" id="pay-card-card" onclick="selectPaymentMethod('card')">
+                                <input type="radio" name="pay-method" value="card" style="display:none">
+                                <span class="pay-icon">💳</span>
+                                <span class="pay-label">신용카드 결제</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Card Payment Form Mock (visible only when card selected) -->
+                    <div id="card-payment-form" class="card-form-box hidden animate-fade">
+                        <div class="virtual-card">
+                            <div class="card-chip"></div>
+                            <div class="card-number-lbl" id="lbl-vcard-number">•••• •••• •••• ••••</div>
+                            <div class="card-footer-row">
+                                <div class="card-holder-lbl">KOREA UNIVERSITY</div>
+                                <div class="card-expiry-lbl" id="lbl-vcard-expiry">MM/YY</div>
+                            </div>
+                        </div>
+                        <div class="card-input-fields">
+                            <input type="text" id="card-num-input" placeholder="카드번호 16자리 (숫자만)" maxlength="16" oninput="updateVirtualCard()">
+                            <div class="card-input-row">
+                                <input type="text" id="card-exp-input" placeholder="만료일 (MM/YY)" maxlength="5" oninput="updateVirtualCard()">
+                                <input type="password" id="card-cvv-input" placeholder="CVV" maxlength="3">
+                            </div>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-primary btn-block btn-lg" onclick="processOrderCheckout()">결제 및 주문 승인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Receipt & QR Code Modal -->
+    <div id="modal-receipt" class="modal-overlay">
+        <div class="modal-card receipt-card glass-panel animate-scale">
+            <button class="modal-close-btn" onclick="closeModal('modal-receipt')">&times;</button>
+            <div class="receipt-header">
+                <div class="receipt-success-icon">🎉</div>
+                <h2>주문 완료 & 식권 발급</h2>
+                <p>결제가 완료되었습니다. 아래 QR코드로 학식을 수령하세요!</p>
+            </div>
+            
+            <div class="receipt-body">
+                <!-- QR Code Display Box -->
+                <div class="qr-code-box">
+                    <div id="qrcode-display-area" class="qrcode-canvas-wrapper">
+                        <!-- Dynamic Canvas QR code will be rendered here -->
+                        <canvas id="qr-canvas" width="160" height="160"></canvas>
+                    </div>
+                    <span class="qr-order-id" id="lbl-receipt-order-id">ORD-20260616-01</span>
+                    <p class="qr-tip">식당 무인 수령 스캐너에 이 화면을 태그해주세요.</p>
+                </div>
+
+                <!-- Order Receipt Details -->
+                <div class="receipt-details">
+                    <div class="receipt-row">
+                        <span class="lbl">주문 일시</span>
+                        <span class="val" id="lbl-receipt-time">2026-06-16 12:30</span>
+                    </div>
+                    <div class="receipt-row">
+                        <span class="lbl">결제 방법</span>
+                        <span class="val" id="lbl-receipt-method">학생 식권 포인트</span>
+                    </div>
+                    <hr class="receipt-divider">
+                    <div id="receipt-items-list" class="receipt-items-sublist">
+                        <!-- Items list -->
+                    </div>
+                    <hr class="receipt-divider">
+                    <div class="receipt-row total">
+                        <span class="lbl">총 결제금액</span>
+                        <span class="val" id="lbl-receipt-total">₩6,000</span>
+                    </div>
+                </div>
+
+                <div class="receipt-actions">
+                    <button class="btn btn-primary btn-block" onclick="closeModal('modal-receipt')">학식 대시보드로 돌아가기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. Order History Modal (Student View) -->
+    <div id="modal-history" class="modal-overlay">
+        <div class="modal-card history-card glass-panel animate-scale">
+            <button class="modal-close-btn" onclick="closeModal('modal-history')">&times;</button>
+            <div class="modal-header">
+                <h2>📝 나의 학식 주문 내역</h2>
+                <p>과거 주문 내역 및 현재 수령 대기 중인 식권을 관리합니다.</p>
+            </div>
+            <div class="modal-body history-body">
+                <div class="history-list" id="student-history-list">
+                    <!-- Dynamic orders list -->
+                    <div class="history-empty">주문 내역이 없습니다.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 5. Admin Menu Editor Modal -->
+    <div id="modal-admin-menu-form" class="modal-overlay">
+        <div class="modal-card menu-form-card glass-panel animate-scale">
+            <button class="modal-close-btn" onclick="closeModal('modal-admin-menu-form')">&times;</button>
+            <div class="modal-header">
+                <h2 id="lbl-menu-form-title">🍲 신규 학식 메뉴 등록</h2>
+                <p>메뉴 이름, 가격, 제공 요일, 식사 구분 및 상세 설정을 입력합니다.</p>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="form-menu-id">
+                
+                <div class="input-row-flex">
+                    <div class="input-group flex-1">
+                        <label for="form-menu-day">제공 요일</label>
+                        <select id="form-menu-day">
+                            <option value="월">월요일</option>
+                            <option value="화">화요일</option>
+                            <option value="수">수요일</option>
+                            <option value="목">목요일</option>
+                            <option value="금">금요일</option>
+                        </select>
+                    </div>
+                    <div class="input-group flex-1">
+                        <label for="form-menu-meal">식사 시간</label>
+                        <select id="form-menu-meal">
+                            <option value="breakfast">🌅 아침 (조식)</option>
+                            <option value="lunch">☀️ 점심 (중식)</option>
+                            <option value="dinner">🌙 저녁 (석식)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="form-menu-name">메뉴 이름</label>
+                    <input type="text" id="form-menu-name" placeholder="예: 고려대 한우 곰탕">
+                </div>
+
+                <div class="input-row-flex">
+                    <div class="input-group flex-1">
+                        <label for="form-menu-price">가격 (원)</label>
+                        <input type="number" id="form-menu-price" placeholder="예: 6500">
+                    </div>
+                    <div class="input-group flex-1">
+                        <label for="form-menu-qty">제공 수량 (일일 수량)</label>
+                        <input type="number" id="form-menu-qty" placeholder="예: 100">
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="form-menu-desc">상세 설명</label>
+                    <textarea id="form-menu-desc" rows="3" placeholder="메뉴에 대한 설명을 입력하세요..."></textarea>
+                </div>
+
+                <div class="input-group">
+                    <label>🌾 알레르기 유발 식품 선택</label>
+                    <div class="allergy-check-grid" id="form-allergy-grid">
+                        <!-- Generated dynamically in JS -->
+                    </div>
+                </div>
+
+                <div class="form-btn-actions">
+                    <button class="btn btn-outline" onclick="closeModal('modal-admin-menu-form')">취소</button>
+                    <button class="btn btn-primary" onclick="saveAdminMenuForm()">저장 및 등록</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- QR Code Script (fallback / standard canvas drawer) -->
+    <script src="app.js"></script>
+</body>
+</html>
